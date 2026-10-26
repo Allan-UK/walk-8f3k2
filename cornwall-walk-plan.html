@@ -79,6 +79,25 @@ ul.wks{list-style:none;margin:0;padding:0}
 .tips p{margin:0 0 10px}
 .prog{font-weight:700;margin:0 0 12px}
 footer{color:var(--muted);font-size:.9rem;margin-top:28px}
+
+.wk{display:block}
+.wk .wt .wc{display:block;margin-top:2px}
+.act{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.act .tick{margin:-2px 0 0 -8px}
+.al{flex:1;min-width:0}
+.alt{font-weight:700}
+.act.is-done .alt{color:var(--done)}
+.ads{color:var(--muted);font-size:.9rem}
+.nb{min-height:44px;background:none;border:1px solid var(--line);color:var(--sea);border-radius:8px;padding:0 12px;font:inherit;font-size:.9rem;margin-top:4px}
+.pn{margin-top:6px}
+.pn label{display:block;color:var(--muted);font-size:.9rem}
+.pn input,.pn textarea{display:block;width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;margin:2px 0 8px}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lgl{list-style:none;margin:0 0 10px;padding:0}
+.lgl li{padding:8px 0;border-top:1px solid var(--line)}
+#lg{margin-top:4px}
+#lgt{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px}
+.count a{color:var(--sea);font-weight:700}
 </style>
 </head>
 <body>
@@ -94,6 +113,7 @@ footer{color:var(--muted);font-size:.9rem;margin-top:28px}
   <p class="note" id="hn"></p>
 </section>
 <p class="count" id="cd"></p>
+<p class="count"><a href="#" id="gt">Go to this week’s log</a></p>
 
 <details id="days"><summary>The four days</summary><div class="dayswrap">
 <div class="day"><h3>Day 1: Penzance to Mousehole</h3><p class="when">Fri 23 April</p><p class="stay">Stay: Ship Inn, Mousehole</p><div class="bar"><i style="width:27%"></i></div><p class="stats">6.0 km, 38 m up, 1–1.5 hrs</p><p class="nt">Flat, easy opening walk via Newlyn.</p></div>
@@ -106,6 +126,8 @@ footer{color:var(--muted);font-size:.9rem;margin-top:28px}
 <h2>Training plan</h2>
 <p class="prog" id="pg"></p>
 <div id="plan"></div>
+
+<details id="lg"><summary>Practice walk log</summary><div class="tips"><p id="lgs"></p><ul class="lgl" id="lgl"></ul><button type="button" class="nb" id="cp">Copy log</button><textarea id="lgt" readonly hidden rows="6"></textarea></div></details>
 
 <h2>Tips and local hills</h2>
 <details>
@@ -127,7 +149,7 @@ footer{color:var(--muted);font-size:.9rem;margin-top:28px}
 </div>
 </details>
 
-<footer>Ticks are saved on this device only. Figures from the AllTrails route you shared; weekly targets are suggestions, so adjust to how you feel.</footer>
+<footer>Ticks and notes are saved on this device only, so you each keep your own. Safari can clear them if you don’t visit for a while, so copy the log now and then. Figures from the AllTrails route you shared; weekly targets are suggestions, so adjust to how you feel.</footer>
 </main>
 <script>
 (function(){
@@ -163,58 +185,97 @@ footer{color:var(--muted);font-size:.9rem;margin-top:28px}
   var BLURB={"Base":"Build the habit and the base.","Hold":"Keep fitness through the holidays.","Build":"Add hills and a pack.","Peak":"Full pack, 22–24 km days, Easter rehearsal.","Taper":"Ease off. Nothing new.","Trip week":"Rest, then walk."};
   var START=Date.UTC(2026,9,19), WEEK=604800000, DAY=86400000;
   var now=new Date(), today=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+  var iso=now.toLocaleDateString("en-CA");
   var cur=Math.floor((today-START)/WEEK);
-  var done=[];
-  try{done=JSON.parse(localStorage.getItem("walk-done")||"[]");if(!Array.isArray(done))done=[];}catch(e){done=[];}
-  function save(){try{localStorage.setItem("walk-done",JSON.stringify(done));}catch(e){}}
   function wc(i){return new Date(START+i*WEEK).toLocaleDateString("en-GB",{day:"numeric",month:"short",timeZone:"UTC"});}
+  function fd(d){return d?new Date(d+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"}):"no date";}
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   function mid(w){return w[2]>0?w[1]+" + "+w[2]+" min":w[1]+" min";}
-  function midL(w){return w[2]>0?w[1]+" + "+w[2]+" minutes":w[1]+" minutes";}
-  function longTxt(w){return w[3]>0?w[3]+" km, "+w[5]+" m up"+(w[4]>0?", then "+w[4]+" km easy":""):"Rest, then start the walk";}
+  function acts(i){var w=W[i],a=[];
+    if(w[1]>0)a.push({id:"m1",l:"Midweek walk 1",p:w[1]+" minutes",k:1});
+    if(w[2]>0)a.push({id:"m2",l:"Midweek walk 2",p:w[2]+" minutes"+(i>=11?", hills or stairs":""),k:1});
+    if(w[3]>0)a.push({id:"lw",l:"Long walk",p:w[3]+" km, "+w[5]+" m up",k:1});
+    if(w[4]>0)a.push({id:"sw",l:"Second walk",p:w[4]+" km, easy",k:1});
+    for(var s=1;s<=w[7];s++)a.push({id:"s"+s,l:"Strength session "+s,p:"about 20 minutes",k:0});
+    return a;}
+  function save(){try{localStorage.setItem("walk-log-v2",JSON.stringify(L));}catch(e){}}
+  var L=null;
+  try{L=JSON.parse(localStorage.getItem("walk-log-v2")||"null");}catch(e){L=null;}
+  if(!L||typeof L!=="object"){L={};
+    try{var old=JSON.parse(localStorage.getItem("walk-done")||"[]");
+      if(Array.isArray(old))old.forEach(function(i){if(W[i])acts(i).forEach(function(a){L[i+"-"+a.id]={x:1,d:""};});});}catch(e){}
+    save();}
+  function sumTxt(e){var b=[];if(!e)return"";if(e.x)b.push("Done "+fd(e.d));if(e.k)b.push(e.k+" km");if(e.n)b.push(e.n.length>60?e.n.slice(0,60)+"…":e.n);return b.join(", ");}
+  function row(i,a){var key=i+"-"+a.id,e=L[key]||{};
+    return '<div class="act'+(e.x?' is-done':'')+'" data-key="'+key+'"><label class="tick"><input type="checkbox"'+(e.x?' checked':'')+' aria-label="Mark '+a.l+' done"></label><div class="al"><div class="alt">'+a.l+': '+a.p+'</div><div class="ads">'+esc(sumTxt(e))+'</div><button type="button" class="nb" aria-expanded="false">Notes and details</button><div class="pn" hidden><div class="r2"><label>Date<input type="date" data-f="d" value="'+esc(e.d||"")+'"></label>'+(a.k?'<label>Actual km<input type="text" inputmode="decimal" data-f="k" value="'+esc(e.k||"")+'"></label>':'')+'</div><label>Note<textarea rows="3" data-f="n">'+esc(e.n||"")+'</textarea></label></div></div></div>';}
+  function weekHTML(i){var w=W[i],A=acts(i);
+    return '<li class="wk'+(i===cur?' now':'')+'" id="w'+i+'"><div class="wt"><b>Week '+(i+1)+'</b><span>from '+wc(i)+(i===cur?', this week':'')+'</span><span class="wc" id="c'+i+'"></span></div>'+(w[6]>0?'<div class="wn">Pack '+w[6]+' kg</div>':'')+(w[8]?'<div class="wx">'+w[8]+'</div>':'')+A.map(function(a){return row(i,a);}).join('')+'</li>';}
 
   var order=[],groups={};
   W.forEach(function(w,i){if(!groups[w[0]]){groups[w[0]]=[];order.push(w[0]);}groups[w[0]].push(i);});
   var plan=document.getElementById("plan"),html="";
   order.forEach(function(p){
-    var idx=groups[p],open=idx.indexOf(cur)>-1||(cur<0&&p==="Base")?" open":"";
-    html+='<details'+open+'><summary><span>'+p+' (weeks '+(idx[0]+1)+(idx.length>1?'–'+(idx[idx.length-1]+1):'')+')</span></summary><p class="phd">'+BLURB[p]+'</p><ul class="wks">';
-    idx.forEach(function(i){
-      var w=W[i],isNow=i===cur,d=done.indexOf(i)>-1;
-      html+='<li class="wk'+(isNow?' now':'')+(d?' is-done':'')+'" id="w'+i+'"><label class="tick"><input type="checkbox" data-i="'+i+'"'+(d?' checked':'')+' aria-label="Mark week '+(i+1)+' done"></label><div class="wb"><div class="wt"><b>Week '+(i+1)+'</b><span>from '+wc(i)+(isNow?', this week':'')+'</span></div><div class="wm">'+longTxt(w)+'</div><div class="wn">Midweek '+midL(w)+'</div><div class="wn">Pack '+w[6]+' kg</div><div class="wn">Strength x'+w[7]+'</div>'+(w[8]?'<div class="wx">'+w[8]+'</div>':'')+'</div></li>';
-    });
-    html+='</ul></details>';
+    var idx=groups[p],open=(idx.indexOf(cur)>-1||(cur<0&&p==="Base"))?" open":"";
+    html+='<details'+open+'><summary><span>'+p+' (weeks '+(idx[0]+1)+(idx.length>1?'–'+(idx[idx.length-1]+1):'')+')</span></summary><p class="phd">'+BLURB[p]+'</p><ul class="wks">'+idx.map(weekHTML).join('')+'</ul></details>';
   });
   plan.innerHTML=html;
 
-  function progress(){document.getElementById("pg").textContent=done.filter(function(i){return i<26;}).length+" of 26 training weeks ticked";}
-  plan.addEventListener("change",function(e){
-    var t=e.target;if(!t.matches("input[data-i]"))return;
-    var i=+t.getAttribute("data-i"),k=done.indexOf(i);
-    if(t.checked&&k<0)done.push(i);if(!t.checked&&k>-1)done.splice(k,1);
-    document.getElementById("w"+i).classList.toggle("is-done",t.checked);
-    save();progress();
+  function logItems(){var items=[];
+    Object.keys(L).forEach(function(k){var e=L[k];if(!e||!e.x)return;var p=k.split("-"),i=+p[0],a=(W[i]?acts(i):[]).filter(function(x){return x.id===p[1];})[0];if(a)items.push({d:e.d||"",i:i,a:a,e:e});});
+    items.sort(function(x,y){return (y.d||"0").localeCompare(x.d||"0");});return items;}
+  function logText(){return logItems().map(function(t){return fd(t.d)+", week "+(t.i+1)+" "+t.a.l+(t.e.k?", "+t.e.k+" km":"")+(t.e.n?": "+t.e.n:"");}).join("\n");}
+  function update(){
+    var tot=0,dn=0;
+    for(var i=0;i<W.length;i++){var A=acts(i),d=0;A.forEach(function(a){tot++;var e=L[i+"-"+a.id];if(e&&e.x){dn++;d++;}});var c=document.getElementById("c"+i);if(c)c.textContent=d+" of "+A.length+" done";}
+    document.getElementById("pg").textContent=dn+" of "+tot+" planned sessions done";
+    var it=logItems(),km=0,nw=0;
+    it.forEach(function(t){if(t.a.k){nw++;km+=parseFloat(t.e.k)||0;}});
+    document.getElementById("lgs").textContent=nw+" walks logged, "+(Math.round(km*10)/10)+" km with distances entered.";
+    document.getElementById("lgl").innerHTML=it.map(function(t){return '<li><b>'+fd(t.d)+'</b> Week '+(t.i+1)+', '+t.a.l+(t.e.k?', '+esc(t.e.k)+' km':'')+(t.e.n?'<div class="wx">'+esc(t.e.n)+'</div>':'')+'</li>';}).join("")||'<li class="wx">Nothing yet. Tick a session to start your log.</li>';
+  }
+  function actEl(t){return t.closest(".act");}
+  plan.addEventListener("change",function(ev){
+    var t=ev.target;if(t.type!=="checkbox")return;
+    var el=actEl(t),key=el.getAttribute("data-key"),e=L[key]=L[key]||{};
+    e.x=t.checked?1:0;if(t.checked&&!e.d)e.d=iso;
+    var di=el.querySelector('[data-f="d"]');if(di)di.value=e.d||"";
+    el.classList.toggle("is-done",t.checked);el.querySelector(".ads").textContent=sumTxt(e);
+    save();update();
   });
-  progress();
+  plan.addEventListener("input",function(ev){
+    var t=ev.target,f=t.getAttribute&&t.getAttribute("data-f");if(!f)return;
+    var el=actEl(t),key=el.getAttribute("data-key"),e=L[key]=L[key]||{};
+    e[f]=t.value;el.querySelector(".ads").textContent=sumTxt(e);save();update();
+  });
+  plan.addEventListener("click",function(ev){
+    var b=ev.target;if(!b.classList||!b.classList.contains("nb"))return;
+    var pn=b.parentNode.querySelector(".pn"),o=pn.hidden;pn.hidden=!o;
+    b.setAttribute("aria-expanded",o?"true":"false");b.textContent=o?"Hide":"Notes and details";
+  });
+  document.getElementById("cp").addEventListener("click",function(){
+    var t=logText(),ta=document.getElementById("lgt");ta.value=t||"Nothing logged yet.";ta.hidden=false;ta.select();
+    try{navigator.clipboard.writeText(t);}catch(e){}
+  });
+  update();
 
   var hb=document.getElementById("hb"),hp=document.getElementById("hp"),hd=document.getElementById("hd"),hn=document.getElementById("hn");
   var days=Math.round((Date.UTC(2027,3,23)-today)/DAY);
   document.getElementById("cd").textContent=days>0?days+" days until you set off from Penzance.":(days===0?"Today is the day. Enjoy it.":"The walk is under way or done.");
+  var gt=document.getElementById("gt");
   if(cur<0){
-    hb.textContent="Starts Monday 19 October";hp.textContent="Week 1 is the base phase.";
-    hd.innerHTML="";hn.textContent="Until then, a couple of easy walks will do.";
+    hb.textContent="Starts Monday 19 October";hp.textContent="Week 1 is the base phase.";hd.innerHTML="";hn.textContent="Until then, a couple of easy walks will do.";gt.hidden=true;
   }else if(cur>26){
-    hb.textContent="Walk complete";hp.textContent="";hd.innerHTML="";hn.textContent="Well done both.";
+    hb.textContent="Walk complete";hp.textContent="";hd.innerHTML="";hn.textContent="Well done both.";gt.hidden=true;
   }else{
     var w=W[cur];
     hb.textContent="Week "+(cur+1)+" of 27";hp.textContent=w[0]+" phase, from "+wc(cur);
     if(cur===26){hd.innerHTML="";hn.textContent=w[8];}
     else{
       hd.innerHTML='<div><dt>Long walk</dt><dd>'+w[3]+' km'+(w[4]>0?' + '+w[4]+' km easy':'')+'</dd></div><div><dt>Climbing</dt><dd>'+w[5]+' m</dd></div><div><dt>Pack</dt><dd>'+w[6]+' kg</dd></div><div><dt>Midweek</dt><dd>'+mid(w)+'</dd></div>';
-      hn.textContent=w[8]||"Strength twice this week."; 
+      hn.textContent=w[8]||"Strength twice this week.";
     }
+    gt.addEventListener("click",function(e){e.preventDefault();var el=document.getElementById("w"+cur);if(el){el.closest("details").open=true;el.scrollIntoView({behavior:"smooth",block:"start"});}});
   }
-  var nowEl=document.getElementById("w"+cur);
-  if(nowEl){var d=nowEl.closest("details");if(d)d.open=true;}
 })();
 </script>
 </body>
